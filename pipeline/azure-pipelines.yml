@@ -1,0 +1,56 @@
+trigger:
+  - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  imageName: 'acrchallengedevops2026.azurecr.io/api-clyvo'
+
+stages:
+- stage: BuildAndTest
+  jobs:
+  - job: Build
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        projects: 'src/**/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: 'src/**/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+    - task: Docker@2
+      inputs:
+        command: 'buildAndPush'
+        repository: $(imageName)
+        dockerfile: 'src/Dockerfile'
+        containerRegistry: 'DockerRegistryConnection'
+        tags: |
+          $(Build.BuildId)
+          latest
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: 'src/Dockerfile'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+- stage: Deploy
+  dependsOn: BuildAndTest
+  jobs:
+  - job: DeployACI
+    steps:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'AzureServiceConnection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az container restart --resource-group RG-Challenge-DevOps --name api-container
