@@ -27,11 +27,12 @@ stages:
         command: 'test'
         projects: 'src/GuardianPet.Tests.Unit/GuardianPet.Tests.Unit.csproj'
         arguments: '--configuration $(buildConfiguration)'
-    - task: Docker@2
+  - task: Docker@2
       inputs:
         command: 'buildAndPush'
         repository: '$(imageName)'
         dockerfile: 'src/Dockerfile'
+        buildContext: 'src'
         containerRegistry: 'DockerRegistryConnection'
         tags: |
           $(Build.BuildId)
@@ -54,3 +55,4 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           az container restart --resource-group RG-Challenge-DevOps --name api-container
+
