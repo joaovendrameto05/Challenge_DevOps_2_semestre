@@ -6,7 +6,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  imageName: 'acrchallengedevops2026.azurecr.io/api-clyvo'
+  imageName: 'api-clyvo' 
 
 stages:
 - stage: BuildAndTest
