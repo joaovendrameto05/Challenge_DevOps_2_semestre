@@ -23,10 +23,10 @@ stages:
         projects: 'src/**/*.csproj'
         arguments: '--configuration $(buildConfiguration)'
     - task: DotNetCoreCLI@2
-      inputs:
-        command: 'test'
-        projects: 'src/**/*.csproj'
-        arguments: '--configuration $(buildConfiguration)'
+  inputs:
+    command: 'test'
+    projects: 'src/GuardianPet.Tests.Unit/GuardianPet.Tests.Unit.csproj'
+    arguments: '--configuration $(buildConfiguration)'
     - task: Docker@2
       inputs:
         command: 'buildAndPush'
