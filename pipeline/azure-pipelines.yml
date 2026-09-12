@@ -6,7 +6,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  imageName: 'api-clyvo' # O nome limpo da imagem
+  imageName: 'api-clyvo'
 
 stages:
 - stage: BuildAndTest
@@ -54,23 +54,6 @@ stages:
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo "1. Obtendo a credencial do ACR..."
           ACR_PASS=$(az acr credential show --name acrchallengedevops2026 --query "passwords[0].value" -o tsv)
-          
-          echo "2. Limpando container antigo (se existir) para evitar conflitos..."
           az container delete --resource-group RG-Challenge-DevOps --name api-container --yes || true
-          
-          echo "3. Fazendo o Deploy da nova imagem no ACI..."
-          az container create \
-            --resource-group RG-Challenge-DevOps \
-            --name api-container \
-            --image acrchallengedevops2026.azurecr.io/api-clyvo:latest \
-            --os-type Linux \
-            --cpu 1 \
-            --memory 1.5 \
-            --registry-login-server acrchallengedevops2026.azurecr.io \
-            --registry-username acrchallengedevops2026 \
-            --registry-password "$ACR_PASS" \
-            --dns-name-label api-clyvo-devops \
-            --ports 8080 \
-            --environment-variables ConnectionStrings__DefaultConnection="Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=db-clyvo-devops.eastus.azurecontainer.io)(PORT=1521)))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=FREEPDB1)));User Id=admin;Password=ClyvoOracle2026!;"
+          az container create --resource-group RG-Challenge-DevOps --name api-container --image acrchallengedevops2026.azurecr.io/api-clyvo:latest --os-type Linux --cpu 1 --memory 1.5 --registry-login-server acrchallengedevops2026.azurecr.io --registry-username acrchallengedevops2026 --registry-password "$ACR_PASS" --dns-name-label api-clyvo-devops --ports 8080 --environment-variables ConnectionStrings__OracleConnection="Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=db-clyvo-devops.eastus.azurecontainer.io)(PORT=1521)))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=FREEPDB1)));User Id=admin;Password=ClyvoOracle2026!;" ASPNETCORE_ENVIRONMENT="Development" ASPNETCORE_URLS="http://+:8080"
