@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace GuardianPet.Controllers
 {
     [ApiController]
-    [Authorize(Policy = "ManageUsers")]
+    [Authorize]
     [Route("api/users")]
     public class UsersController : ControllerBase
     {
@@ -35,7 +35,7 @@ namespace GuardianPet.Controllers
         }
 
         /// <summary>Lista os registros de usuário.</summary>
-        /// <remarks>Exige Bearer JWT e a permissão users.manage.</remarks>
+        /// <remarks>Exige apenas Bearer JWT válido.</remarks>
         /// <returns>Lista de resultados, vazia quando não há correspondências.</returns>
         [HttpGet]
         [ProducesResponseType(typeof(List<UserResponseDTO>), StatusCodes.Status200OK)]
@@ -49,7 +49,7 @@ namespace GuardianPet.Controllers
         }
 
         /// <summary>Obtém um registro de usuário pelo identificador.</summary>
-        /// <remarks>Exige Bearer JWT e a permissão users.manage.</remarks>
+        /// <remarks>Exige apenas Bearer JWT válido.</remarks>
         /// <param name="id">Identificador do registro de usuário.</param>
         /// <returns>Registro solicitado ou atualizado; 404 quando não encontrado.</returns>
         [HttpGet("{id}")]
@@ -66,7 +66,7 @@ namespace GuardianPet.Controllers
         }
 
         /// <summary>Busca registros de usuário pelo nome.</summary>
-        /// <remarks>Exige Bearer JWT e a permissão users.manage.</remarks>
+        /// <remarks>Exige apenas Bearer JWT válido.</remarks>
         /// <param name="name">Nome utilizado na busca.</param>
         /// <returns>Lista de resultados, vazia quando não há correspondências.</returns>
         [HttpGet("search")]
@@ -82,7 +82,7 @@ namespace GuardianPet.Controllers
         }
 
         /// <summary>Obtém o usuário associado ao e-mail informado.</summary>
-        /// <remarks>Exige Bearer JWT e a permissão users.manage.</remarks>
+        /// <remarks>Exige apenas Bearer JWT válido.</remarks>
         /// <param name="email">E-mail do usuário procurado.</param>
         /// <returns>Registro solicitado ou atualizado; 404 quando não encontrado.</returns>
         [HttpGet("email")]
@@ -99,7 +99,7 @@ namespace GuardianPet.Controllers
         }
 
         /// <summary>Atualiza os dados de um registro de usuário.</summary>
-        /// <remarks>Exige Bearer JWT e a permissão users.manage.</remarks>
+        /// <remarks>Exige apenas Bearer JWT válido.</remarks>
         /// <param name="id">Identificador do registro de usuário.</param>
         /// <param name="dto">Dados de usuário para atualização.</param>
         /// <returns>Registro solicitado ou atualizado; 404 quando não encontrado.</returns>
@@ -117,7 +117,7 @@ namespace GuardianPet.Controllers
         }
 
         /// <summary>Exclui um registro de usuário.</summary>
-        /// <remarks>Exige Bearer JWT e a permissão users.manage.</remarks>
+        /// <remarks>Exige apenas Bearer JWT válido.</remarks>
         /// <param name="id">Identificador do registro de usuário.</param>
         /// <returns>Sem conteúdo após a exclusão.</returns>
         [HttpDelete("{id}")]
