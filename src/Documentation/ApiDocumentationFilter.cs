@@ -1,7 +1,7 @@
 using GuardianPet.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace GuardianPet.Documentation;
@@ -23,11 +23,24 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
             var protectedEndpoint = metadata.OfType<IAuthorizeData>().Any()
                 && !metadata.OfType<IAllowAnonymous>().Any();
             operation.Security = protectedEndpoint
-                ? [new OpenApiSecurityRequirement
+                ? new List<OpenApiSecurityRequirement>
                 {
-                    [new OpenApiSecuritySchemeReference("Bearer", document)] = []
-                }]
-                : [];
+                    new OpenApiSecurityRequirement
+                    {
+                        {
+                            new OpenApiSecurityScheme
+                            {
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "Bearer"
+                                }
+                            },
+                            new string[] {}
+                        }
+                    }
+                }
+                : new List<OpenApiSecurityRequirement>();
 
             // Business validation and automatic model validation use different bodies.
             var businessValidation = (description.HttpMethod == "POST"
@@ -40,12 +53,15 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
                     Description = "Dados inválidos: validação do corpo ou regra de negócio.",
                     Content = new Dictionary<string, OpenApiMediaType>
                     {
-                        ["application/json"] = new()
+                        ["application/json"] = new OpenApiMediaType
                         {
                             Schema = new OpenApiSchema
                             {
-                                OneOf = [context.SchemaGenerator.GenerateSchema(typeof(ErrorResponse), context.SchemaRepository),
-                                    context.SchemaGenerator.GenerateSchema(typeof(ValidationProblemDetails), context.SchemaRepository)]
+                                AnyOf = new List<OpenApiSchema>
+                                {
+                                    context.SchemaGenerator.GenerateSchema(typeof(ErrorResponse), context.SchemaRepository),
+                                    context.SchemaGenerator.GenerateSchema(typeof(ValidationProblemDetails), context.SchemaRepository)
+                                }
                             }
                         }
                     }
@@ -63,12 +79,12 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
         {
             Summary = summary,
             Description = "Acesso anônimo; não exige token JWT.",
-            Security = [],
+            Security = new List<OpenApiSecurityRequirement>(),
             Responses = new OpenApiResponses { ["200"] = HealthResponse("Healthy") }
         };
         if (readiness) operation.Responses.Add("503", HealthResponse("Unhealthy: Oracle indisponível."));
         var item = new OpenApiPathItem();
-        item.AddOperation(HttpMethod.Get, operation);
+        item.AddOperation(OperationType.Get, operation);
         document.Paths[path] = item;
     }
 
@@ -77,7 +93,7 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
         Description = description,
         Content = new Dictionary<string, OpenApiMediaType>
         {
-            ["text/plain"] = new() { Schema = new OpenApiSchema { Type = JsonSchemaType.String } }
+            ["text/plain"] = new OpenApiMediaType { Schema = new OpenApiSchema { Type = "string" } }
         }
     };
 }
