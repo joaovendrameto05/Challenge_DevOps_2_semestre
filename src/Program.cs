@@ -10,8 +10,6 @@ using GuardianPet.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models; // <-- O pacote que instalamos agora fará isso funcionar!
 using System.Text.Json.Serialization;
 using Serilog;
 using Serilog.Events;
@@ -119,14 +117,7 @@ builder.Services.AddSwaggerGen(options =>
     }
     
     options.DocumentFilter<ApiDocumentationFilter>();
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        Description = "Enter the JWT token returned by POST /api/auth/login."
-    });
-    options.SwaggerDoc("v1", new OpenApiInfo
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "GuardianPet API - Sprint 4",
         Version = "v1",
