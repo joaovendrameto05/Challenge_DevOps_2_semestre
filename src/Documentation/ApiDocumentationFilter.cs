@@ -6,7 +6,6 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace GuardianPet.Documentation;
 
-// Documentation only: authorization remains controlled by endpoint metadata.
 public sealed class ApiDocumentationFilter : IDocumentFilter
 {
     public void Apply(OpenApiDocument document, DocumentFilterContext context)
@@ -15,8 +14,18 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
         {
             var path = "/" + description.RelativePath?.Split('?')[0];
             if (!document.Paths.TryGetValue(path, out var item)) continue;
-            var operation = item.Operations?.FirstOrDefault(pair =>
-                string.Equals(pair.Key.Method, description.HttpMethod, StringComparison.OrdinalIgnoreCase)).Value;
+            
+            var httpMethod = description.HttpMethod?.ToUpperInvariant();
+            var operation = httpMethod switch
+            {
+                "GET" => item.Operations.GetValueOrDefault(OperationType.Get),
+                "POST" => item.Operations.GetValueOrDefault(OperationType.Post),
+                "PUT" => item.Operations.GetValueOrDefault(OperationType.Put),
+                "DELETE" => item.Operations.GetValueOrDefault(OperationType.Delete),
+                "PATCH" => item.Operations.GetValueOrDefault(OperationType.Patch),
+                _ => null
+            };
+
             if (operation is null) continue;
 
             var metadata = description.ActionDescriptor.EndpointMetadata;
@@ -42,7 +51,6 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
                 }
                 : new List<OpenApiSecurityRequirement>();
 
-            // Business validation and automatic model validation use different bodies.
             var businessValidation = (description.HttpMethod == "POST"
                 && path is "/api/users" or "/api/veterinarians" or "/api/consultations")
                 || (description.HttpMethod == "PUT" && path == "/api/consultations/{id}");
