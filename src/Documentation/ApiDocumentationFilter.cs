@@ -16,15 +16,18 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
             if (!document.Paths.TryGetValue(path, out var item)) continue;
             
             var httpMethod = description.HttpMethod?.ToUpperInvariant();
-            var operation = httpMethod switch
-            {
-                "GET" => item.Operations.GetValueOrDefault(OperationType.Get),
-                "POST" => item.Operations.GetValueOrDefault(OperationType.Post),
-                "PUT" => item.Operations.GetValueOrDefault(OperationType.Put),
-                "DELETE" => item.Operations.GetValueOrDefault(OperationType.Delete),
-                "PATCH" => item.Operations.GetValueOrDefault(OperationType.Patch),
-                _ => null
-            };
+            OpenApiOperation? operation = null;
+
+            if (httpMethod == "GET" && item.Operations.ContainsKey(OperationType.Get))
+                operation = item.Operations[OperationType.Get];
+            else if (httpMethod == "POST" && item.Operations.ContainsKey(OperationType.Post))
+                operation = item.Operations[OperationType.Post];
+            else if (httpMethod == "PUT" && item.Operations.ContainsKey(OperationType.Put))
+                operation = item.Operations[OperationType.Put];
+            else if (httpMethod == "DELETE" && item.Operations.ContainsKey(OperationType.Delete))
+                operation = item.Operations[OperationType.Delete];
+            else if (httpMethod == "PATCH" && item.Operations.ContainsKey(OperationType.Patch))
+                operation = item.Operations[OperationType.Patch];
 
             if (operation is null) continue;
 
