@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using Serilog;
 using Serilog.Events;
@@ -56,7 +55,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
-
 builder.Services.AddAuthorization(options => options.AddPolicy("ManageUsers",
     policy => policy.RequireAuthenticatedUser().RequireClaim("permission", "users.manage")));
 
@@ -67,6 +65,7 @@ builder.Services.AddOpenTelemetry()
         tracing.AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddSource(GuardianPetTelemetry.ServiceName);
+
         
         if (builder.Environment.IsDevelopment())
         {
@@ -102,7 +101,9 @@ builder.Services.AddControllers()
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection"));
+    options.UseOracle(
+        builder.Configuration.GetConnectionString("OracleConnection")
+    );
 });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -119,12 +120,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, "GuardianPet.xml");
-    if (File.Exists(xmlPath))
-    {
-        options.IncludeXmlComments(xmlPath);
-    }
-    
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "GuardianPet.xml"));
     options.DocumentFilter<ApiDocumentationFilter>();
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -135,7 +131,7 @@ builder.Services.AddSwaggerGen(options =>
     });
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "GuardianPet API - Sprint 4",
+        Title = "GuardianPet API",
         Version = "v1",
         Description = "Veterinary management API developed with ASP.NET Core and Oracle Database"
     });
@@ -149,19 +145,25 @@ builder.Services.AddHealthChecks()
 var app = builder.Build();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
+
 app.UseMiddleware<MetricsMiddleware>();
+
 app.UseSerilogRequestLogging();
+
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseSwagger();
+
 app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "GuardianPet API v1 - Sprint 4");
 });
 
 app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
@@ -181,7 +183,8 @@ app.Run();
 static async Task ApplyMigrationsAsync(WebApplication app)
 {
     const int maxAttempts = 3;
-    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigration");
+    var logger = app.Services.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("DatabaseMigration");
 
     for (var attempt = 1; attempt <= maxAttempts; attempt++)
     {
@@ -195,7 +198,12 @@ static async Task ApplyMigrationsAsync(WebApplication app)
         }
         catch (Exception ex) when (attempt < maxAttempts)
         {
-            logger.LogWarning("Database migration attempt {Attempt}/{MaxAttempts} failed.", attempt, maxAttempts);
+            logger.LogWarning(
+                "Database migration attempt {Attempt}/{MaxAttempts} failed: {ExceptionType}; Oracle error code {OracleErrorCode}",
+                attempt,
+                maxAttempts,
+                ex.GetType().FullName,
+                (ex.GetBaseException() as OracleException)?.Number);
             await Task.Delay(TimeSpan.FromSeconds(2));
         }
     }
@@ -208,7 +216,7 @@ static async Task ApplyMigrationsAsync(WebApplication app)
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Falha ignorada para manter a API online.");
+        logger.LogError(ex, "Failed to apply migrations. Proceeding without it to keep API alive.");
     }
 }
 
