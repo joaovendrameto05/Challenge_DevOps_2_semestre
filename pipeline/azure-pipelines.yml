@@ -31,25 +31,12 @@ stages:
         projects: 'src/GuardianPet.Tests.Unit/GuardianPet.Tests.Unit.csproj'
         arguments: '--configuration $(buildConfiguration)'
 
-    - task: AzureCLI@2
-      displayName: 'Docker Login, Build and Push via CLI'
-      inputs:
-        azureSubscription: 'AzureServiceConnection'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          # 1. Obtém a senha do ACR dinamicamente
-          ACR_PASS=$(az acr credential show --name $(acrName) --query "passwords[0].value" -o tsv)
-          
-          # 2. Faz o login no Docker do Agent
-          echo "$ACR_PASS" | docker login $(acrName).azurecr.io -u $(acrName) --password-stdin
-          
-          # 3. Constrói a imagem localmente
-          docker build -t $(acrName).azurecr.io/$(imageName):latest -t $(acrName).azurecr.io/$(imageName):$(Build.BuildId) -f src/Dockerfile src/
-          
-          # 4. Envia para o ACR
-          docker push $(acrName).azurecr.io/$(imageName):latest
-          docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+    - script: |
+        echo "$(AcrPassword)" | docker login $(acrName).azurecr.io -u $(acrName) --password-stdin
+        docker build -t $(acrName).azurecr.io/$(imageName):latest -t $(acrName).azurecr.io/$(imageName):$(Build.BuildId) -f src/Dockerfile src/
+        docker push $(acrName).azurecr.io/$(imageName):latest
+        docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+      displayName: 'Docker Login, Build and Push via Script'
 
     - task: PublishBuildArtifacts@1
       inputs:
@@ -68,7 +55,7 @@ stages:
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          ACR_PASS=$(az acr credential show --name $(acrName) --query "passwords[0].value" -o tsv)
+          ACR_PASS="$(AcrPassword)"
           az container delete --resource-group RG-Challenge-DevOps --name api-container --yes || true
           az container create \
             --resource-group RG-Challenge-DevOps \
