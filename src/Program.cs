@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models; // <-- O pacote que instalamos agora fará isso funcionar!
 using System.Text.Json.Serialization;
 using Serilog;
 using Serilog.Events;
@@ -26,7 +27,6 @@ using Oracle.ManagedDataAccess.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. JWT Blindado (Força chaves válidas para não dar crash na nuvem)
 var jwtIssuer = "GuardianPet";
 var jwtAudience = "GuardianPet";
 var jwtKey = "SuperSecretKeyForGuardianPetApi123456789!";
@@ -80,7 +80,6 @@ builder.Services.AddOpenTelemetry()
             reader.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 30_000);
     });
 
-// 2. Serilog Blindado (Remove WriteTo.File para evitar crash de permissão no Docker)
 builder.Services.AddSerilog(configuration => configuration
     .Enrich.FromLogContext()
     .MinimumLevel.Information()
@@ -120,33 +119,14 @@ builder.Services.AddSwaggerGen(options =>
     }
     
     options.DocumentFilter<ApiDocumentationFilter>();
-    
-    // Definir o esquema de segurança Bearer
-    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
         Description = "Enter the JWT token returned by POST /api/auth/login."
     });
-    
-    // Vincular Bearer a todos os endpoints
-    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] { }
-        }
-    });
-    
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "GuardianPet API - Sprint 4",
         Version = "v1",
@@ -155,7 +135,9 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddHealthChecks()
-    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "self", "liveness" });
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "self", "liveness" })
+    .AddCheck<OracleHealthCheck>("oracle", failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "ready", "database" });
 
 var app = builder.Build();
 
@@ -164,14 +146,12 @@ app.UseMiddleware<MetricsMiddleware>();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
-// Sempre habilita Swagger
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "GuardianPet API v1 - Sprint 4");
 });
 
-// 3. HttpsRedirection REMOVIDO para impedir o ERR_CONNECTION_RESET no Azure ACI
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -181,7 +161,11 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     Predicate = registration => registration.Tags.Contains("liveness")
 });
 
-// 4. Migração Blindada (Tenta conectar; se falhar, mantém a API online de qualquer jeito)
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = registration => registration.Tags.Contains("ready")
+});
+
 try 
 {
     using var scope = app.Services.CreateScope();
