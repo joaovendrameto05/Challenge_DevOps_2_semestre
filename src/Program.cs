@@ -214,29 +214,3 @@ static async Task ApplyMigrationsAsync(WebApplication app)
 }
 
 public partial class Program { }
-
-app.UseSwagger();
-
-app.UseSwaggerUI(options =>
-{
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "GuardianPet API v1 - Sprint 4");
-});
-
-app.UseHttpsRedirection();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    Predicate = registration => registration.Tags.Contains("liveness")
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = registration => registration.Tags.Contains("ready")
-});
-
-app.Run();
