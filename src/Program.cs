@@ -120,6 +120,8 @@ builder.Services.AddSwaggerGen(options =>
     }
     
     options.DocumentFilter<ApiDocumentationFilter>();
+    
+    // Definir o esquema de segurança Bearer
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
@@ -127,6 +129,23 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Description = "Enter the JWT token returned by POST /api/auth/login."
     });
+    
+    // Vincular Bearer a todos os endpoints
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
+    });
+    
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "GuardianPet API - Sprint 4",
@@ -145,6 +164,7 @@ app.UseMiddleware<MetricsMiddleware>();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
+// Sempre habilita Swagger
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
